@@ -1,4 +1,37 @@
-# ByeDPI VPN Service
+# ByeDPI Go Service
+
+## 🚀 One-Line Installation
+
+**For fresh Windows (no additional software needed):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/yusufgurdogan/yallah_dpi/main/quick-install.ps1 | iex
+```
+
+This will:
+- ✅ Download and install automatically
+- ✅ Set up as Windows service
+- ✅ Configure auto-start on boot  
+- ✅ Start DPI bypass immediately
+- ✅ Set up global proxy automatically
+
+**Requirements:** Run PowerShell as Administrator
+
+---
+
+## 🛠️ Developer Installation
+
+**For developers who want to build and manage locally:**
+
+```bash
+# Build
+go build -o byedpi.exe main.go
+
+# Install and manage
+.\install.ps1 -Install     # Install service
+.\install.ps1 -Start       # Start service
+.\install.ps1 -Status      # Check status
+.\install.ps1 -Console     # Debug mode
+```
 
 🚀 A **transparent VPN service** implementation that bypasses Deep Packet Inspection (DPI) using advanced packet manipulation techniques. Unlike traditional proxy-based solutions, this service works completely transparently - **no configuration needed in browsers or applications**.
 
