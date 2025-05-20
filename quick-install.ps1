@@ -204,49 +204,17 @@ netsh.exe winhttp show proxy
 "@
     $statusScript | Out-File -FilePath "$installDir\check-status.ps1" -Encoding UTF8
     
-    # Create uninstaller script
-    Write-Host "Creating uninstaller script..." -ForegroundColor Green
-    $uninstallScript = @"
-# YallahDPI Uninstaller
-Write-Host "YallahDPI Uninstaller" -ForegroundColor Red
-Write-Host "================" -ForegroundColor Red
-
-if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "Administrator privileges required!" -ForegroundColor Red
-    exit 1
-}
-
-# Reset proxy settings
-Write-Host "Resetting proxy settings..." -ForegroundColor Yellow
-reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f | Out-Null
-reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /f 2>$null | Out-Null
-netsh.exe winhttp reset proxy | Out-Null
-
-# Remove firewall rules
-Write-Host "Removing firewall rules..." -ForegroundColor Yellow
-Remove-NetFirewallRule -DisplayName "YallahDPI Go*" -ErrorAction SilentlyContinue | Out-Null
-
-# Stop and uninstall service
-Write-Host "Stopping service..." -ForegroundColor Yellow
-Stop-Service -Name YallahDPIGo -Force -ErrorAction SilentlyContinue
-& "$installDir\yallahdpi-go.exe" stop 2>$null
-& "$installDir\yallahdpi-go.exe" uninstall 2>$null
-sc.exe delete YallahDPIGo 2>$null | Out-Null
-
-# Check if we're in the install directory and change if needed
-if (\$PWD.Path -like "\$installDir*") {
-    Set-Location -Path \$env:TEMP
-}
-
-# Remove installation folder
-Write-Host "Removing program files..." -ForegroundColor Yellow
-Start-Sleep -Seconds 2
-Remove-Item -Path "\$installDir" -Recurse -Force -ErrorAction SilentlyContinue
-
-Write-Host "YallahDPI has been uninstalled." -ForegroundColor Green
-"@
-    $uninstallScript | Out-File -FilePath "$installDir\uninstall.ps1" -Encoding UTF8
-    Copy-Item "$installDir\uninstall.ps1" "$installDir\uninstall-yallahdpi.ps1" -Force
+    # Download uninstaller script from repository
+    Write-Host "Downloading uninstaller script..." -ForegroundColor Green
+    try {
+        $uninstallerUrl = "https://raw.githubusercontent.com/yusufgurdogan/yallah_dpi/refs/heads/main/uninstall-yallahdpi.ps1"
+        Invoke-WebRequest -Uri $uninstallerUrl -OutFile "$installDir\uninstall-yallahdpi.ps1" -ErrorAction Stop
+        Copy-Item "$installDir\uninstall-yallahdpi.ps1" "$installDir\uninstall.ps1" -Force
+        Write-Host "Uninstaller script downloaded successfully!" -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to download uninstaller script: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "You may need to download it manually later." -ForegroundColor Yellow
+    }
     
 } catch {
     Write-Host "Installation failed: $($_.Exception.Message)" -ForegroundColor Red
