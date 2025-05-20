@@ -49,6 +49,11 @@ type Config struct {
 	DefaultTtl int    `json:"default_ttl"`
 	NoDomain   bool   `json:"no_domain"`
 	LogLevel   string `json:"log_level"`
+
+	// DNS Configuration
+	UseCustomDNS bool     `json:"use_custom_dns"`
+	DNSServers   []string `json:"dns_servers"`
+	DNSTimeoutMs int      `json:"dns_timeout_ms"`
 }
 
 // Default configuration with your exact specifications
@@ -56,10 +61,10 @@ func defaultConfig() *Config {
 	return &Config{
 		ListenAddress:       "127.0.0.1",
 		ListenPort:          1080,
-		MaxConnections:      512,
-		BufferSize:          16384,
+		MaxConnections:      1024,
+		BufferSize:          65536,
 		DesyncMethod:        "split",
-		SplitPosition:       4,
+		SplitPosition:       2,
 		SplitAtHost:         false,
 		DesyncHttp:          true,
 		DesyncHttps:         true,
@@ -75,6 +80,9 @@ func defaultConfig() *Config {
 		DefaultTtl:          0,
 		NoDomain:            false,
 		LogLevel:            "info",
+		UseCustomDNS:        true,
+		DNSServers:          []string{"8.8.8.8", "8.8.4.4"},
+		DNSTimeoutMs:        1000,
 	}
 }
 
@@ -135,6 +143,8 @@ type ProxyServer struct {
 	conns     map[net.Conn]bool
 	connMutex sync.RWMutex
 	logger    service.Logger
+	dnsCache  map[string]string
+	dnsMutex  sync.RWMutex
 }
 
 // Start the YallahDPI service
@@ -143,10 +153,11 @@ func (bs *YallahDPIService) Start() error {
 	bs.config = loadConfig()
 
 	bs.proxy = &ProxyServer{
-		config: bs.config,
-		ctx:    bs.ctx,
-		conns:  make(map[net.Conn]bool),
-		logger: bs.logger,
+		config:   bs.config,
+		ctx:      bs.ctx,
+		conns:    make(map[net.Conn]bool),
+		logger:   bs.logger,
+		dnsCache: make(map[string]string),
 	}
 
 	if bs.logger != nil {
@@ -154,6 +165,10 @@ func (bs *YallahDPIService) Start() error {
 		bs.logger.Infof("Configuration: Split=%d, SplitAtHost=%v, HTTP=%v, HTTPS=%v, UDP=%v, TLS-Split=%v",
 			bs.config.SplitPosition, bs.config.SplitAtHost, bs.config.DesyncHttp, bs.config.DesyncHttps,
 			bs.config.DesyncUdp, bs.config.TlsRecordSplit)
+
+		if bs.config.UseCustomDNS && len(bs.config.DNSServers) > 0 {
+			bs.logger.Infof("Using custom DNS servers: %v", bs.config.DNSServers)
+		}
 	}
 
 	return bs.proxy.Start()
@@ -243,6 +258,91 @@ func (ps *ProxyServer) acceptLoop() {
 	}
 }
 
+// Custom DNS resolution
+func (ps *ProxyServer) resolveCustomDNS(hostname string) (string, error) {
+	// Check cache first
+	ps.dnsMutex.RLock()
+	if ip, ok := ps.dnsCache[hostname]; ok {
+		ps.dnsMutex.RUnlock()
+		return ip, nil
+	}
+	ps.dnsMutex.RUnlock()
+
+	// If custom DNS is disabled, use system resolver
+	if !ps.config.UseCustomDNS || len(ps.config.DNSServers) == 0 {
+		addrs, err := net.LookupHost(hostname)
+		if err != nil || len(addrs) == 0 {
+			return "", fmt.Errorf("DNS resolution failed for %s: %v", hostname, err)
+		}
+
+		// Cache the result
+		ps.dnsMutex.Lock()
+		ps.dnsCache[hostname] = addrs[0]
+		ps.dnsMutex.Unlock()
+
+		return addrs[0], nil
+	}
+
+	// Create custom resolver using first DNS server
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Duration(ps.config.DNSTimeoutMs) * time.Millisecond,
+			}
+			return d.DialContext(ctx, "udp", ps.config.DNSServers[0]+":53")
+		},
+	}
+
+	// Set timeout context
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(ps.config.DNSTimeoutMs)*time.Millisecond)
+	defer cancel()
+
+	// Perform lookup
+	addrs, err := r.LookupHost(ctx, hostname)
+	if err != nil || len(addrs) == 0 {
+		// Fallback to second DNS server if available
+		if len(ps.config.DNSServers) > 1 {
+			r := &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					d := net.Dialer{
+						Timeout: time.Duration(ps.config.DNSTimeoutMs) * time.Millisecond,
+					}
+					return d.DialContext(ctx, "udp", ps.config.DNSServers[1]+":53")
+				},
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(),
+				time.Duration(ps.config.DNSTimeoutMs)*time.Millisecond)
+			defer cancel()
+
+			addrs, err = r.LookupHost(ctx, hostname)
+			if err != nil || len(addrs) == 0 {
+				// Final fallback to system resolver
+				addrs, err = net.LookupHost(hostname)
+				if err != nil || len(addrs) == 0 {
+					return "", fmt.Errorf("all DNS resolutions failed for %s", hostname)
+				}
+			}
+		} else {
+			// Fallback to system resolver
+			addrs, err = net.LookupHost(hostname)
+			if err != nil || len(addrs) == 0 {
+				return "", fmt.Errorf("DNS resolution failed for %s: %v", hostname, err)
+			}
+		}
+	}
+
+	// Cache the result
+	ps.dnsMutex.Lock()
+	ps.dnsCache[hostname] = addrs[0]
+	ps.dnsMutex.Unlock()
+
+	return addrs[0], nil
+}
+
 // Handle a single client connection
 func (ps *ProxyServer) handleConnection(clientConn net.Conn) {
 	defer func() {
@@ -294,10 +394,30 @@ func (ps *ProxyServer) handleHTTPSConnect(clientConn net.Conn, requestLine strin
 	}
 
 	target := parts[1]
-
-	// Connect to target server
-	serverConn, err := net.DialTimeout("tcp", target, 10*time.Second)
+	host, port, err := net.SplitHostPort(target)
 	if err != nil {
+		// If no port specified, use default HTTPS port
+		host = target
+		port = "443"
+		target = host + ":" + port
+	}
+
+	// Resolve hostname using custom DNS
+	ip, err := ps.resolveCustomDNS(host)
+	if err != nil {
+		if ps.logger != nil {
+			ps.logger.Errorf("DNS resolution failed: %v", err)
+		}
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		return
+	}
+
+	// Connect to target server using resolved IP
+	serverConn, err := net.DialTimeout("tcp", ip+":"+port, 10*time.Second)
+	if err != nil {
+		if ps.logger != nil {
+			ps.logger.Errorf("Connection failed: %v", err)
+		}
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		return
 	}
@@ -352,16 +472,36 @@ func (ps *ProxyServer) handleHTTPRequest(clientConn net.Conn, request string, in
 	}
 
 	// Add port if not present
-	if !strings.Contains(host, ":") {
-		host += ":80"
+	var port string
+	if strings.Contains(host, ":") {
+		var err error
+		host, port, err = net.SplitHostPort(host)
+		if err != nil {
+			return
+		}
+	} else {
+		port = "80"
 	}
 
 	// Apply HTTP modifications
 	modifiedRequest := ps.modifyHTTPRequest(request)
 
-	// Connect to target server
-	serverConn, err := net.DialTimeout("tcp", host, 10*time.Second)
+	// Resolve hostname using custom DNS
+	ip, err := ps.resolveCustomDNS(host)
 	if err != nil {
+		if ps.logger != nil {
+			ps.logger.Errorf("DNS resolution failed: %v", err)
+		}
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		return
+	}
+
+	// Connect to target server using resolved IP
+	serverConn, err := net.DialTimeout("tcp", ip+":"+port, 10*time.Second)
+	if err != nil {
+		if ps.logger != nil {
+			ps.logger.Errorf("Connection failed: %v", err)
+		}
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		return
 	}
@@ -528,8 +668,8 @@ func (ps *ProxyServer) sendTLSWithSplit(dst net.Conn, data []byte) {
 				// Send first record
 				dst.Write(firstRecord)
 
-				// Small delay to ensure packet separation
-				time.Sleep(1 * time.Millisecond)
+				// Optimize: reduce sleep time for better performance while still ensuring packet separation
+				time.Sleep(100 * time.Microsecond) // Reduced from 1ms to 100µs
 
 				// Send second record
 				dst.Write(secondRecord)
@@ -586,8 +726,8 @@ func (ps *ProxyServer) sendWithSplit(dst net.Conn, data []byte, context string) 
 		// Send first part
 		dst.Write(data[:splitPos])
 
-		// Small delay to ensure packet separation
-		time.Sleep(1 * time.Millisecond)
+		// Optimize: reduce sleep time for better performance
+		time.Sleep(100 * time.Microsecond) // Reduced from 1ms to 100µs
 
 		// Send remaining part
 		dst.Write(data[splitPos:])
