@@ -164,7 +164,7 @@ try {
     # Configure global proxy
     Write-Host "Setting up global proxy..." -ForegroundColor Green
     reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f | Out-Null
-    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t REG_SZ /d "127.0.0.1:1080" /f | Out-Null
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t REG_SZ /d "http=127.0.0.1:1080;https=127.0.0.1:1080" /f | Out-Null
     reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyOverride /t REG_SZ /d "localhost;127.*;10.*;172.16.*-172.31.*;192.168.*;<local>" /f | Out-Null
     netsh.exe winhttp set proxy proxy-server="127.0.0.1:1080" bypass-list="localhost;127.*;192.168.*" | Out-Null
     
@@ -246,6 +246,7 @@ Remove-Item -Path "\$installDir" -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "YallahDPI has been uninstalled." -ForegroundColor Green
 "@
     $uninstallScript | Out-File -FilePath "$installDir\uninstall.ps1" -Encoding UTF8
+    Copy-Item "$installDir\uninstall.ps1" "$installDir\uninstall-yallahdpi.ps1" -Force
     
 } catch {
     Write-Host "Installation failed: $($_.Exception.Message)" -ForegroundColor Red
