@@ -16,59 +16,10 @@ $tempDir = "$env:TEMP\yallahdpi-quick-install"
 if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force }
 New-Item -ItemType Directory -Path $tempDir | Out-Null
 
-# Define install directory
+# Create install directory
 $installDir = "$env:ProgramFiles\YallahDPI"
-
-# First, handle existing installation - stop and remove service before deleting directory
-if (Test-Path $installDir) {
-    Write-Host "Existing installation found. Stopping services..." -ForegroundColor Yellow
-    
-    # Stop and remove the service if it exists
-    $service = Get-Service -Name YallahDPIGo -ErrorAction SilentlyContinue
-    if ($service) {
-        Write-Host "Stopping YallahDPI service..." -ForegroundColor Yellow
-        Stop-Service -Name YallahDPIGo -Force -ErrorAction SilentlyContinue
-        & "$installDir\yallahdpi-go.exe" stop 2>$null
-        & "$installDir\yallahdpi-go.exe" uninstall 2>$null
-        sc.exe delete YallahDPIGo 2>$null | Out-Null
-        Start-Sleep -Seconds 3
-    }
-    
-    # Attempt to kill any remaining processes that might have locks on files
-    Get-Process | Where-Object { $_.Path -like "$installDir\*" } | ForEach-Object {
-        Write-Host "Terminating process: $($_.Name)" -ForegroundColor Yellow
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-    }
-    
-    # Allow time for processes to fully terminate
-    Start-Sleep -Seconds 2
-    
-    # Now try to remove the directory
-    try {
-        Write-Host "Removing existing installation directory..." -ForegroundColor Yellow
-        Remove-Item -Path $installDir -Recurse -Force -ErrorAction Stop
-    } catch {
-        Write-Host "Could not remove directory normally, trying alternative methods..." -ForegroundColor Yellow
-        
-        # Try using cmd to force directory removal
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c rd /s /q `"$installDir`"" -NoNewWindow -Wait
-        Start-Sleep -Seconds 1
-        
-        # If still exists, try one more approach with robocopy trick to clear read-only attributes
-        if (Test-Path $installDir) {
-            $emptyDir = "$env:TEMP\yallahdpi-empty"
-            if (!(Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir | Out-Null }
-            robocopy $emptyDir $installDir /MIR /NFL /NDL /NJH /NJS /NC /NS /MT:16 >$null
-            Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item -Path $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
-
-# Create new installation directory
-if (!(Test-Path $installDir)) {
-    New-Item -ItemType Directory -Path $installDir | Out-Null
-}
+if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
+New-Item -ItemType Directory -Path $installDir | Out-Null
 
 try {
     # Download the pre-compiled binary if available
@@ -164,7 +115,7 @@ try {
     # Install and start service
     Set-Location $installDir
     
-    # Double-check no existing service is running
+    # Stop existing service if running
     Write-Host "Checking for existing service..." -ForegroundColor Yellow
     $service = Get-Service -Name YallahDPIGo -ErrorAction SilentlyContinue
     if ($service) {
@@ -263,32 +214,10 @@ Stop-Service -Name YallahDPIGo -Force -ErrorAction SilentlyContinue
 & "$installDir\yallahdpi-go.exe" uninstall 2>$null
 sc.exe delete YallahDPIGo 2>$null | Out-Null
 
-# Allow time for processes to fully terminate
-Start-Sleep -Seconds 3
-
-# Kill any remaining processes that might have locks on files
-Get-Process | Where-Object { \$_.Path -like "$installDir\*" } | ForEach-Object {
-    Write-Host "Terminating process: \$(\$_.Name)" -ForegroundColor Yellow
-    Stop-Process -Id \$_.Id -Force -ErrorAction SilentlyContinue
-}
-
-# Allow more time for processes to terminate
-Start-Sleep -Seconds 2
-
 # Remove installation folder
 Write-Host "Removing program files..." -ForegroundColor Yellow
-try {
-    Remove-Item -Path "$installDir" -Recurse -Force -ErrorAction Stop
-} catch {
-    # Try using cmd to force directory removal
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c rd /s /q `"$installDir`"" -NoNewWindow -Wait
-    Start-Sleep -Seconds 1
-    
-    # If still exists, notify user
-    if (Test-Path "$installDir") {
-        Write-Host "Some files could not be removed. You may need to restart your computer and delete manually." -ForegroundColor Yellow
-    }
-}
+Start-Sleep -Seconds 2
+Remove-Item -Path "$installDir" -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "YallahDPI has been uninstalled." -ForegroundColor Green
 "@
