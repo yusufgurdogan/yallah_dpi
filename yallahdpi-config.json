@@ -21,6 +21,9 @@
   "no_domain": false,
   "log_level": "info",
   "use_custom_dns": true,
-  "dns_servers": ["8.8.8.8", "8.8.4.4"],
+  "dns_servers": [
+    "8.8.8.8",
+    "8.8.4.4"
+  ],
   "dns_timeout_ms": 1000
 }
