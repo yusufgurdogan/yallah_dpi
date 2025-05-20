@@ -58,6 +58,6 @@ YallahDPI'ı kaldırmak isterseniz:
 1. PowerShell'i yönetici olarak açın
 2. Aşağıdaki komutu yazın:
 ```
-& "C:\Program Files\YallahDPI\uninstall.ps1"
+& "C:\Program Files\YallahDPI\uninstall-yallahdpi.ps1"
 ```
 3. Kaldırma işlemi otomatik olarak gerçekleşecektir
