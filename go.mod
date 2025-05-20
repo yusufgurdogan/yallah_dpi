@@ -1,4 +1,4 @@
-module byedpi-go
+module yallahdpi-go
 
 go 1.21
 

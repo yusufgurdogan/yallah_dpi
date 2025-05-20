@@ -1,4 +1,4 @@
-# ByeDPI Go Service Installation Script
+# YallahDPI Go Service Installation Script
 # Run as Administrator
 
 param(
@@ -11,8 +11,8 @@ param(
 )
 
 # Configuration
-$ServiceName = "ByeDPIGo"
-$BinaryName = "byedpi-go.exe"
+$ServiceName = "YallahDPIGo"
+$BinaryName = "yallahdpi-go.exe"
 $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BinaryPath = Join-Path $CurrentDir $BinaryName
 
@@ -51,8 +51,8 @@ function Get-ServiceStatus {
 }
 
 # Install service
-function Install-ByeDPIService {
-    Write-Info "Installing ByeDPI Go Service..."
+function Install-YallahDPIService {
+    Write-Info "Installing YallahDPI Go Service..."
     
     if (!(Test-Binary)) { return }
     
@@ -86,8 +86,8 @@ function Install-ByeDPIService {
 }
 
 # Uninstall service
-function Uninstall-ByeDPIService {
-    Write-Info "Uninstalling ByeDPI Go Service..."
+function Uninstall-YallahDPIService {
+    Write-Info "Uninstalling YallahDPI Go Service..."
     
     if (!(Test-Binary)) { return }
     
@@ -100,7 +100,7 @@ function Uninstall-ByeDPIService {
     # Stop service if running
     if ($status -eq "Running") {
         Write-Info "Stopping service first..."
-        Stop-ByeDPIService
+        Stop-YallahDPIService
         Start-Sleep -Seconds 3
     }
     
@@ -119,8 +119,8 @@ function Uninstall-ByeDPIService {
 }
 
 # Start service
-function Start-ByeDPIService {
-    Write-Info "Starting ByeDPI Go Service..."
+function Start-YallahDPIService {
+    Write-Info "Starting YallahDPI Go Service..."
     
     $status = Get-ServiceStatus
     if ($status -eq "NotInstalled") {
@@ -151,8 +151,8 @@ function Start-ByeDPIService {
 }
 
 # Stop service
-function Stop-ByeDPIService {
-    Write-Info "Stopping ByeDPI Go Service..."
+function Stop-YallahDPIService {
+    Write-Info "Stopping YallahDPI Go Service..."
     
     $status = Get-ServiceStatus
     if ($status -eq "NotInstalled") {
@@ -183,7 +183,7 @@ function Stop-ByeDPIService {
 
 # Show service status and info
 function Show-ServiceStatus {
-    Write-Info "ByeDPI Go Service Status"
+    Write-Info "YallahDPI Go Service Status"
     Write-Info "========================"
     
     $status = Get-ServiceStatus
@@ -226,7 +226,7 @@ function Show-ServiceInfo {
         Write-Host "  Start Type: " -NoNewline; Write-Info $service.StartType
         
         # Show config if exists
-        $configFile = Join-Path $CurrentDir "byedpi-config.json"
+        $configFile = Join-Path $CurrentDir "yallahdpi-config.json"
         if (Test-Path $configFile) {
             Write-Host "  Config File: " -NoNewline; Write-Info $configFile
         }
@@ -235,7 +235,7 @@ function Show-ServiceInfo {
 
 # Run in console mode
 function Start-ConsoleMode {
-    Write-Info "Starting ByeDPI in console mode..."
+    Write-Info "Starting YallahDPI in console mode..."
     Write-Warning "Press Ctrl+C to stop"
     Write-Info ""
     
@@ -254,11 +254,11 @@ function Configure-Firewall {
     Write-Info "Configuring Windows Firewall..."
     
     # Remove existing rules
-    Remove-NetFirewallRule -DisplayName "ByeDPI Go*" -ErrorAction SilentlyContinue
+    Remove-NetFirewallRule -DisplayName "YallahDPI Go*" -ErrorAction SilentlyContinue
     
     # Add new rules
-    New-NetFirewallRule -DisplayName "ByeDPI Go - Inbound" -Direction Inbound -Protocol TCP -LocalPort 1080 -Action Allow -Profile Domain,Private
-    New-NetFirewallRule -DisplayName "ByeDPI Go - Outbound" -Direction Outbound -Program $BinaryPath -Action Allow -Profile Domain,Private
+    New-NetFirewallRule -DisplayName "YallahDPI Go - Inbound" -Direction Inbound -Protocol TCP -LocalPort 1080 -Action Allow -Profile Domain,Private
+    New-NetFirewallRule -DisplayName "YallahDPI Go - Outbound" -Direction Outbound -Program $BinaryPath -Action Allow -Profile Domain,Private
     
     Write-Success "Firewall rules configured!"
 }
@@ -287,7 +287,7 @@ function Show-ProxyInstructions {
 
 # Main script logic
 Write-Host ""
-Write-Host "ByeDPI Go Service Manager" -ForegroundColor Magenta
+Write-Host "YallahDPI Go Service Manager" -ForegroundColor Magenta
 Write-Host "=========================" -ForegroundColor Magenta
 Write-Host ""
 
@@ -302,19 +302,19 @@ if ($Install -or $Uninstall -or $Start -or $Stop) {
 
 # Execute requested action
 if ($Install) {
-    Install-ByeDPIService
+    Install-YallahDPIService
     Configure-Firewall
     Show-ProxyInstructions
 }
 elseif ($Uninstall) {
-    Uninstall-ByeDPIService
+    Uninstall-YallahDPIService
 }
 elseif ($Start) {
-    Start-ByeDPIService
+    Start-YallahDPIService
     Show-ProxyInstructions
 }
 elseif ($Stop) {
-    Stop-ByeDPIService
+    Stop-YallahDPIService
 }
 elseif ($Status) {
     Show-ServiceStatus

@@ -1,0 +1,23 @@
+{
+  "listen_address": "127.0.0.1",
+  "listen_port": 1080,
+  "max_connections": 512,
+  "buffer_size": 16384,
+  "desync_method": "split",
+  "split_position": 4,
+  "split_at_host": false,
+  "desync_http": true,
+  "desync_https": true,
+  "desync_udp": true,
+  "host_remove_spaces": true,
+  "host_mixed_case": false,
+  "domain_mixed_case": false,
+  "tls_record_split": true,
+  "tls_record_split_pos": 0,
+  "tls_record_split_at_sni": true,
+  "fake_ttl": 8,
+  "fake_sni": "www.iana.org",
+  "default_ttl": 0,
+  "no_domain": false,
+  "log_level": "info"
+}

@@ -1,19 +1,19 @@
 @echo off
-echo Building ByeDPI Go Service...
+echo Building YallahDPI Go Service...
 echo.
 
 REM Set build variables
-set BINARY_NAME=byedpi-go.exe
+set BINARY_NAME=YallahDPI-go.exe
 set VERSION=1.0.0
 
 REM Clean previous builds
 if exist %BINARY_NAME% del %BINARY_NAME%
-if exist byedpi-config.json del byedpi-config.json
+if exist YallahDPI-config.json del YallahDPI-config.json
 
 REM Initialize Go module if not exists
 if not exist go.mod (
     echo Initializing Go module...
-    go mod init byedpi-go
+    go mod init YallahDPI-go
     go get github.com/kardianos/service@latest
 )
 
@@ -51,7 +51,7 @@ if errorlevel 1 (
 
 echo.
 echo =================================
-echo ByeDPI Go Service Build Complete
+echo YallahDPI Go Service Build Complete
 echo =================================
 echo.
 echo To install as Windows service:

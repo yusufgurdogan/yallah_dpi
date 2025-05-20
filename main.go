@@ -80,7 +80,7 @@ func defaultConfig() *Config {
 
 // Load configuration from file or create default
 func loadConfig() *Config {
-	configFile := "byedpi-config.json"
+	configFile := "yallahdpi-config.json"
 
 	// Try to load existing config
 	if data, err := os.ReadFile(configFile); err == nil {
@@ -99,8 +99,8 @@ func loadConfig() *Config {
 	return config
 }
 
-// ByeDPI Windows Service
-type ByeDPIService struct {
+// YallahDPI Windows Service
+type YallahDPIService struct {
 	config *Config
 	proxy  *ProxyServer
 	ctx    context.Context
@@ -110,7 +110,7 @@ type ByeDPIService struct {
 
 // Main service program
 type program struct {
-	service *ByeDPIService
+	service *YallahDPIService
 }
 
 func (p *program) Start(s service.Service) error {
@@ -137,8 +137,8 @@ type ProxyServer struct {
 	logger    service.Logger
 }
 
-// Start the ByeDPI service
-func (bs *ByeDPIService) Start() error {
+// Start the YallahDPI service
+func (bs *YallahDPIService) Start() error {
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
 	bs.config = loadConfig()
 
@@ -150,7 +150,7 @@ func (bs *ByeDPIService) Start() error {
 	}
 
 	if bs.logger != nil {
-		bs.logger.Infof("Starting ByeDPI service on %s:%d", bs.config.ListenAddress, bs.config.ListenPort)
+		bs.logger.Infof("Starting YallahDPI service on %s:%d", bs.config.ListenAddress, bs.config.ListenPort)
 		bs.logger.Infof("Configuration: Split=%d, SplitAtHost=%v, HTTP=%v, HTTPS=%v, UDP=%v, TLS-Split=%v",
 			bs.config.SplitPosition, bs.config.SplitAtHost, bs.config.DesyncHttp, bs.config.DesyncHttps,
 			bs.config.DesyncUdp, bs.config.TlsRecordSplit)
@@ -160,9 +160,9 @@ func (bs *ByeDPIService) Start() error {
 }
 
 // Stop the service
-func (bs *ByeDPIService) Stop() error {
+func (bs *YallahDPIService) Stop() error {
 	if bs.logger != nil {
-		bs.logger.Info("Stopping ByeDPI service...")
+		bs.logger.Info("Stopping YallahDPI service...")
 	}
 	if bs.cancel != nil {
 		bs.cancel()
@@ -609,8 +609,8 @@ func (ps *ProxyServer) findHostPosition(data []byte) int {
 func main() {
 	// Service configuration
 	svcConfig := &service.Config{
-		Name:        "ByeDPIGo",
-		DisplayName: "ByeDPI Go Service",
+		Name:        "YallahDPIGo",
+		DisplayName: "YallahDPI Go Service",
 		Description: "DPI bypass service with packet desynchronization techniques",
 		Option: map[string]interface{}{
 			"DelayedAutoStart":       false,
@@ -621,8 +621,8 @@ func main() {
 	}
 
 	// Create service instance
-	byedpiService := &ByeDPIService{}
-	prg := &program{service: byedpiService}
+	yallahdpiService := &YallahDPIService{}
+	prg := &program{service: yallahdpiService}
 
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
@@ -634,7 +634,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	byedpiService.logger = logger
+	yallahdpiService.logger = logger
 
 	// Handle command line arguments
 	if len(os.Args) > 1 {
@@ -687,9 +687,9 @@ func main() {
 			return
 		case "console":
 			// Run in console mode for testing
-			fmt.Println("Starting ByeDPI service in console mode...")
+			fmt.Println("Starting YallahDPI service in console mode...")
 			fmt.Println("Press Ctrl+C to stop")
-			byedpiService.Start()
+			yallahdpiService.Start()
 			select {} // Block forever
 		}
 	}

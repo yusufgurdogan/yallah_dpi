@@ -1,16 +1,16 @@
-# Complete ByeDPI Setup - Run as Administrator
+# Complete YallahDPI Setup - Run as Administrator
 # This handles all PowerShell alias conflicts
 
-Write-Host "=== ByeDPI Silent Global Setup ===" -ForegroundColor Cyan
+Write-Host "=== YallahDPI Silent Global Setup ===" -ForegroundColor Cyan
 
 # 1. Configure service for auto-start
 Write-Host "Configuring auto-start..." -ForegroundColor Green
-sc.exe config ByeDPIGo start= auto | Out-Null
-sc.exe config ByeDPIGo type= own | Out-Null
+sc.exe config YallahDPIGo start= auto | Out-Null
+sc.exe config YallahDPIGo type= own | Out-Null
 
 # 2. Set service recovery options
 Write-Host "Setting crash recovery..." -ForegroundColor Green
-sc.exe failure ByeDPIGo reset= 0 actions= restart/5000/restart/5000/restart/5000 | Out-Null
+sc.exe failure YallahDPIGo reset= 0 actions= restart/5000/restart/5000/restart/5000 | Out-Null
 
 # 3. Configure global proxy settings
 Write-Host "Setting up global proxy..." -ForegroundColor Green
@@ -27,7 +27,7 @@ Write-Host "`n=== Configuration Complete ===" -ForegroundColor Green
 
 # 4. Verify everything
 Write-Host "`nService Status:" -ForegroundColor Yellow
-$service = Get-Service -Name ByeDPIGo -ErrorAction SilentlyContinue
+$service = Get-Service -Name YallahDPIGo -ErrorAction SilentlyContinue
 if ($service) {
     Write-Host "  Status: $($service.Status)" -ForegroundColor Green
     Write-Host "  Startup: $($service.StartType)" -ForegroundColor Green
@@ -66,13 +66,13 @@ try {
 Write-Host "`n=== Final Steps ===" -ForegroundColor Cyan
 Write-Host "1. Reboot your computer to test auto-start" -ForegroundColor White
 Write-Host "2. Your service will run silently in the background" -ForegroundColor White
-Write-Host "3. All traffic will be routed through ByeDPI" -ForegroundColor White
+Write-Host "3. All traffic will be routed through YallahDPI" -ForegroundColor White
 
 # Optional: Create a quick status check script
 $statusScript = @"
-# ByeDPI Status Check
-Write-Host "ByeDPI Status:" -ForegroundColor Cyan
-Get-Service ByeDPIGo | Format-Table -AutoSize
+# YallahDPI Status Check
+Write-Host "YallahDPI Status:" -ForegroundColor Cyan
+Get-Service YallahDPIGo | Format-Table -AutoSize
 netsh.exe winhttp show proxy
 "@
 
