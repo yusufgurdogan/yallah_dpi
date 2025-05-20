@@ -45,14 +45,9 @@ Get-Service YallahDPIGo
 Eğer internet bağlantınızda sorun yaşarsanız:
 
 1. PowerShell'i yönetici olarak açın
-2. Aşağıdaki komutlardan birini yazın:
+2. Aşağıdaki komutu yazın:
 ```
-"C:\Program Files\YallahDPI\check-status.ps1"
-```
-ya da önce dizine gidin:
-```
-cd "C:\Program Files\YallahDPI"
-.\check-status.ps1
+& "C:\Program Files\YallahDPI\check-status.ps1"
 ```
 3. Servisin çalışıp çalışmadığını kontrol edin
 
@@ -61,13 +56,8 @@ cd "C:\Program Files\YallahDPI"
 YallahDPI'ı kaldırmak isterseniz:
 
 1. PowerShell'i yönetici olarak açın
-2. Aşağıdaki komutlardan birini yazın:
+2. Aşağıdaki komutu yazın:
 ```
-"C:\Program Files\YallahDPI\uninstall.ps1"
-```
-ya da önce dizine gidin:
-```
-cd "C:\Program Files\YallahDPI"
-.\uninstall.ps1
+& "C:\Program Files\YallahDPI\uninstall.ps1"
 ```
 3. Kaldırma işlemi otomatik olarak gerçekleşecektir
