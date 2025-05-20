@@ -18,6 +18,25 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 
 # Create install directory
 $installDir = "$env:ProgramFiles\YallahDPI"
+
+# Stop existing service if running
+Write-Host "Checking for existing service..." -ForegroundColor Yellow
+$service = Get-Service -Name YallahDPIGo -ErrorAction SilentlyContinue
+if ($service) {
+    Write-Host "Stopping existing service..." -ForegroundColor Yellow
+    Stop-Service -Name YallahDPIGo -Force -ErrorAction SilentlyContinue
+    sc.exe delete YallahDPIGo 2>$null
+    Start-Sleep -Seconds 2
+}
+
+# Check if we're currently inside the directory we're trying to delete
+# If so, change to a different directory first
+if ($PWD.Path -like "$installDir*") {
+    Write-Host "Changing directory to avoid removal conflicts..." -ForegroundColor Yellow
+    Set-Location -Path $env:TEMP
+}
+
+# Now we can safely remove the directory
 if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
 New-Item -ItemType Directory -Path $installDir | Out-Null
 
@@ -214,10 +233,15 @@ Stop-Service -Name YallahDPIGo -Force -ErrorAction SilentlyContinue
 & "$installDir\yallahdpi-go.exe" uninstall 2>$null
 sc.exe delete YallahDPIGo 2>$null | Out-Null
 
+# Check if we're in the install directory and change if needed
+if (\$PWD.Path -like "\$installDir*") {
+    Set-Location -Path \$env:TEMP
+}
+
 # Remove installation folder
 Write-Host "Removing program files..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
-Remove-Item -Path "$installDir" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "\$installDir" -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "YallahDPI has been uninstalled." -ForegroundColor Green
 "@
